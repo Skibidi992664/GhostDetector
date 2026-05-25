@@ -86,7 +86,7 @@ async function start() {
   }
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'environment' } })
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: { ideal: 'environment' } } })
     video.srcObject = stream
     video.play().catch(() => {})
     setStatus('Camera + mic active. Waiting for sensor data...')
