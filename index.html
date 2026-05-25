@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Sensor Fusion — PWA Prototype</title>
+  <title>Ghost Detector — PWA</title>
   <link rel="stylesheet" href="style.css">
-  <meta name="theme-color" content="#1f2937">
+  <meta name="theme-color" content="#070b1a">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="SensorFusion">
+  <meta name="apple-mobile-web-app-title" content="Ghost Detector">
 </head>
 <body>
   <header>
-    <h1>Sensor Fusion (PWA Prototype)</h1>
-    <p class="subtitle">Runs in Safari on iPhone — no Mac needed</p>
+    <h1>Ghost Detector</h1>
+    <p class="subtitle">Live anomaly scanner — Safari PWA on iPhone</p>
   </header>
 
   <main>
@@ -32,10 +32,20 @@
       </div>
     </div>
 
-    <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <input id="passphrase" type="password" placeholder="Set passphrase (optional)" style="padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06)">
-      <button id="lockBtn">Lock/Unlock Storage</button>
-      <div style="color:var(--muted);font-size:12px">Storage saved to device (encrypted if passphrase set)</div>
+    <div class="status-panel">
+      <span id="status">Ready — tap START to request camera, microphone and motion.</span>
+    </div>
+
+    <div class="control-row">
+      <button id="startBtn">Start Monitoring</button>
+      <button id="exportBtn">Export Events</button>
+      <button id="clearBtn">Clear Saved</button>
+    </div>
+
+    <div class="storage-row">
+      <input id="passphrase" type="password" placeholder="Passphrase for saved events" />
+      <button id="lockBtn">Lock / Unlock</button>
+      <div class="storage-note">Saved locally; encrypted when locked.</div>
     </div>
 
     <section>

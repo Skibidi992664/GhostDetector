@@ -4,6 +4,7 @@ const exportBtn = document.getElementById('exportBtn')
 const clearBtn = document.getElementById('clearBtn')
 const lockBtn = document.getElementById('lockBtn')
 const passInput = document.getElementById('passphrase')
+const statusEl = document.getElementById('status')
 const scoreEl = document.getElementById('score')
 const sensorsEl = document.getElementById('sensors')
 const eventsList = document.getElementById('events')
@@ -17,6 +18,12 @@ let spectrogram = []
 let savedEvents = []
 let encrypted = false
 let cryptoKey = null
+
+function setStatus(text) {
+  if (statusEl) {
+    statusEl.textContent = text
+  }
+}
 
 function updateHUD(score, active) {
   scoreEl.textContent = Math.round(score)
@@ -71,11 +78,19 @@ async function start() {
   running = true
   startBtn.textContent = 'Stop Monitoring'
 
-  // audio
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    setStatus('Browser does not support getUserMedia. Use Safari on iPhone over HTTPS.')
+    running = false
+    startBtn.textContent = 'Start Monitoring'
+    return
+  }
+
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'environment' } })
     video.srcObject = stream
-    // audio setup
+    video.play().catch(() => {})
+    setStatus('Camera + mic active. Waiting for sensor data...')
+
     audioCtx = new (window.AudioContext || window.webkitAudioContext)()
     const source = audioCtx.createMediaStreamSource(stream)
     analyser = audioCtx.createAnalyser()
@@ -84,13 +99,17 @@ async function start() {
     source.connect(analyser)
   } catch (e) {
     console.warn('media error', e)
+    setStatus('Permission denied or camera/mic unavailable. Reload and allow access.')
+    running = false
+    startBtn.textContent = 'Start Monitoring'
+    return
   }
 
-  // device motion
   window.addEventListener('devicemotion', onMotion)
-  navigator.geolocation.getCurrentPosition(()=>{}, ()=>{})
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(()=>{}, ()=>{})
+  }
 
-  // spectrogram draw loop
   requestAnimationFrame(drawLoop)
 }
 
@@ -102,6 +121,7 @@ function stop() {
 }
 
 let lastReadings = {}
+let lastEventTime = 0
 
 function onMotion(ev) {
   const acc = ev.accelerationIncludingGravity || ev.acceleration
@@ -148,7 +168,8 @@ function drawLoop() {
   const brightness = computeBrightness()
   const audioLevel = analyser ? dataArray.reduce((a,b)=>a+b,0)/dataArray.length : 0
 
-  // simple normalization
+  setStatus(`Audio: ${Math.round(audioLevel)} | Brightness: ${brightness ? brightness.toFixed(0) : 'n/a'} | Motion: ${Math.round(lastReadings.acc||0)}`)
+
   const norm = {
     motion: Math.min(1, (lastReadings.acc||0)/5),
     gyro: Math.min(1, (lastReadings.gyro||0)/5),
@@ -167,24 +188,15 @@ function drawLoop() {
 
   updateHUD(score, active)
 
-  // event detection
-  if (score > 60) {
-    const evt = { timestamp: Date.now(), score, label: score>80? 'High':'Medium', sensors: active }
+  // event detection once per 2 seconds when threshold crossed
+  if (score > 60 && Date.now() - lastEventTime > 2000) {
+    lastEventTime = Date.now()
+    const evt = { timestamp: Date.now(), score, label: score > 80 ? 'High' : 'Medium', sensors: active }
     addEvent(evt)
   }
 
   requestAnimationFrame(drawLoop)
 }
-
-saveBtn.addEventListener('click', ()=>{
-  const blob = new Blob([JSON.stringify(savedEvents,null,2)], {type:'application/json'})
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `sensor_events_${Date.now()}.json`
-  a.click()
-  URL.revokeObjectURL(url)
-})
 
 exportBtn.addEventListener('click', ()=>{
   const blob = new Blob([JSON.stringify(savedEvents,null,2)], {type:'application/json'})
