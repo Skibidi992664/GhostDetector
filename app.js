@@ -28,13 +28,7 @@ let lastBrightness = null
 let lastEventTime = 0
 let lastEvplikeTime = 0
 let lastSlsPulse = 0
-
-let audioCtx, analyser, dataArray
-let running = false
 let spectrogram = []
-let savedEvents = []
-let encrypted = false
-let cryptoKey = null
 
 function setStatus(text) {
   if (statusEl) {
