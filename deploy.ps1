@@ -14,7 +14,11 @@ git config user.name $userName
 git add .
 git commit -m "Add PWA prototype"
 git branch -M main
-git remote remove origin -ErrorAction SilentlyContinue
+try {
+    git remote remove origin 2>$null
+} catch {
+    # ignore if origin does not exist
+}
 git remote add origin $repoUrl
 git push -u origin main
 
