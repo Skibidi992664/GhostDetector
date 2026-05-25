@@ -5,6 +5,7 @@ const clearBtn = document.getElementById('clearBtn')
 const lockBtn = document.getElementById('lockBtn')
 const passInput = document.getElementById('passphrase')
 const statusEl = document.getElementById('status')
+const errorBanner = document.getElementById('errorBanner')
 const scoreEl = document.getElementById('score')
 const sensorsEl = document.getElementById('sensors')
 const eventsList = document.getElementById('events')
@@ -33,6 +34,22 @@ let spectrogram = []
 function setStatus(text) {
   if (statusEl) {
     statusEl.textContent = text
+  }
+}
+
+function showError(text) {
+  if (errorBanner) {
+    errorBanner.hidden = false
+    errorBanner.textContent = text
+  }
+  setStatus(`ERROR: ${text}`)
+  console.error(text)
+}
+
+function clearError() {
+  if (errorBanner) {
+    errorBanner.hidden = true
+    errorBanner.textContent = ''
   }
 }
 
@@ -106,6 +123,7 @@ async function loadSavedEvents() {
 
 async function start() {
   if (running) return stop()
+  clearError()
   running = true
   startBtn.textContent = 'Stop Monitoring'
 
@@ -135,7 +153,7 @@ async function start() {
     source.connect(analyser)
   } catch (e) {
     console.warn('media error', e)
-    setStatus('Permission denied or camera/mic unavailable. Reload and allow access.')
+    showError(e.message || String(e))
     running = false
     startBtn.textContent = 'Start Monitoring'
     return
@@ -349,6 +367,16 @@ if (slsBtn) {
 }
 
 window.start = start
+
+window.addEventListener('error', event => {
+  const msg = event.message || (event.error && event.error.message) || 'Unknown error occurred'
+  showError(msg)
+})
+
+window.addEventListener('unhandledrejection', event => {
+  const reason = event.reason
+  showError(reason && reason.message ? reason.message : String(reason || 'Unhandled promise rejection'))
+})
 
 // Simple AES-GCM encryption helpers using passphrase
 async function getKeyMaterial(password) {

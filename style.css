@@ -24,6 +24,7 @@ video.light-alert{opacity:0.75;box-shadow:0 0 0 4px rgba(255,20,20,0.85);}
 section{margin-top:24px}
 .status-panel{background:rgba(13,20,44,0.95);padding:16px 18px;border-radius:18px;margin-top:18px;box-shadow:0 12px 35px rgba(0,0,0,0.22);}
 .status-panel span{color:#93c5fd;font-size:14px;font-weight:600}
+.error-banner{margin-top:12px;padding:14px 16px;border-radius:16px;background:rgba(220,38,38,0.18);color:#fee2e2;border:1px solid rgba(248,113,113,0.28);font-weight:700;line-height:1.4;}
 .control-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}
 .storage-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:12px}
 .storage-row input{flex:1;min-width:180px;padding:12px 14px;border-radius:14px;border:1px solid rgba(148,163,184,0.24);background:rgba(15,23,42,0.9);color:#eef2ff}
