@@ -11,6 +11,23 @@ const eventsList = document.getElementById('events')
 const video = document.getElementById('video')
 const vcanvas = document.getElementById('vcanvas')
 const vctx = vcanvas.getContext('2d')
+const videoContainer = document.getElementById('videoContainer')
+const slsCanvas = document.getElementById('slsCanvas')
+const slsCtx = slsCanvas ? slsCanvas.getContext('2d') : null
+const modeBtns = document.querySelectorAll('.mode-btn[data-mode]')
+const slsBtn = document.getElementById('slsBtn')
+
+let audioCtx, analyser, dataArray
+let running = false
+let savedEvents = []
+let encrypted = false
+let cryptoKey = null
+let cameraMode = 'normal'
+let slsActive = false
+let lastBrightness = null
+let lastEventTime = 0
+let lastEvplikeTime = 0
+let lastSlsPulse = 0
 
 let audioCtx, analyser, dataArray
 let running = false
@@ -28,6 +45,26 @@ function setStatus(text) {
 function updateHUD(score, active) {
   scoreEl.textContent = Math.round(score)
   sensorsEl.textContent = active.join(', ') || 'none'
+}
+
+function setCameraMode(mode) {
+  cameraMode = mode
+  video.classList.toggle('green-mode', mode === 'green')
+  video.classList.toggle('light-mode', mode === 'light')
+  video.classList.toggle('infrared-mode', mode === 'infrared')
+  modeBtns.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode)
+  })
+  setStatus(`Mode: ${mode.toUpperCase()} — tap START to apply.`)
+}
+
+function toggleSls() {
+  slsActive = !slsActive
+  if (slsBtn) {
+    slsBtn.textContent = slsActive ? 'SLS ON' : 'SLS OFF'
+    slsBtn.classList.toggle('active', slsActive)
+  }
+  setStatus(`SLS ${slsActive ? 'activated' : 'deactivated'}`)
 }
 
 function addEvent(evt) {
@@ -91,6 +128,11 @@ async function start() {
     video.play().catch(() => {})
     setStatus('Camera + mic active. Waiting for sensor data...')
 
+    if (slsCanvas) {
+      slsCanvas.width = slsCanvas.clientWidth
+      slsCanvas.height = slsCanvas.clientHeight
+    }
+
     audioCtx = new (window.AudioContext || window.webkitAudioContext)()
     const source = audioCtx.createMediaStreamSource(stream)
     analyser = audioCtx.createAnalyser()
@@ -140,6 +182,49 @@ function computeBrightness() {
   } catch(e) { return null }
 }
 
+function getVoiceEnergy(data) {
+  const binCount = data.length
+  const low = Math.floor(binCount * 0.03)
+  const high = Math.floor(binCount * 0.2)
+  let sum = 0
+  for (let i = low; i <= high; i++) {
+    sum += data[i]
+  }
+  return sum
+}
+
+function renderSls(brightness, audioLevel, voiceScore) {
+  if (!slsCtx || !slsCanvas) return
+  const w = slsCanvas.width
+  const h = slsCanvas.height
+  slsCtx.clearRect(0,0,w,h)
+  const lines = 8
+  const now = Date.now()
+  const pulse = Math.sin(now / 250) * 0.5 + 0.5
+  for (let i = 0; i < lines; i++) {
+    const y = (h / lines) * i + 10
+    slsCtx.strokeStyle = `rgba(96,165,250,${0.12 + 0.18*Math.sin(now/500 + i)})`
+    slsCtx.lineWidth = 2
+    slsCtx.beginPath()
+    slsCtx.moveTo(0, y)
+    slsCtx.lineTo(w, y)
+    slsCtx.stroke()
+  }
+  if (brightness !== null && brightness > 170) {
+    slsCtx.fillStyle = `rgba(255,50,50,${Math.min(0.35,(brightness-170)/85)})`
+    slsCtx.fillRect(0,0,w,h)
+  }
+  if (audioLevel > 80) {
+    slsCtx.fillStyle = `rgba(56,189,248,${Math.min(0.3,(audioLevel-80)/80)})`
+    slsCtx.fillRect(0,0,w,h)
+  }
+  if (voiceScore > 0.35) {
+    slsCtx.strokeStyle = `rgba(34,197,94,0.8)`
+    slsCtx.lineWidth = 4
+    slsCtx.strokeRect(8,8,w-16,h-16)
+  }
+}
+
 function drawSpectrogramColumn(mags) {
   const canvas = document.getElementById('spec')
   const ctx = canvas.getContext('2d')
@@ -167,8 +252,28 @@ function drawLoop() {
 
   const brightness = computeBrightness()
   const audioLevel = analyser ? dataArray.reduce((a,b)=>a+b,0)/dataArray.length : 0
+  const voiceRange = getVoiceEnergy(dataArray)
+  const voiceScore = voiceRange / (audioLevel + 1)
+  const anomalyFlags = []
 
-  setStatus(`Audio: ${Math.round(audioLevel)} | Brightness: ${brightness ? brightness.toFixed(0) : 'n/a'} | Motion: ${Math.round(lastReadings.acc||0)}`)
+  if (brightness !== null && cameraMode === 'light' && brightness > 180) {
+    video.classList.add('light-alert')
+    anomalyFlags.push('light')
+  } else {
+    video.classList.remove('light-alert')
+  }
+
+  if (audioLevel > 60 && voiceScore > 0.35 && audioLevel < 90) {
+    if (Date.now() - lastEvplikeTime > 3000) {
+      lastEvplikeTime = Date.now()
+      addEvent({ timestamp: Date.now(), score: 72, label: 'EVP-like', sensors: ['audio'], explanation: ['Potential low-volume voice band detected'] })
+    }
+    anomalyFlags.push('evp')
+  }
+
+  if (slsActive) renderSls(brightness, audioLevel, voiceScore)
+
+  setStatus(`Mode: ${cameraMode.toUpperCase()} | Audio: ${Math.round(audioLevel)} | Bright: ${brightness ? brightness.toFixed(0) : 'n/a'} | Motion: ${Math.round(lastReadings.acc||0)}`)
 
   const norm = {
     motion: Math.min(1, (lastReadings.acc||0)/5),
@@ -240,6 +345,14 @@ lockBtn.addEventListener('click', async ()=>{
 
 // load existing on startup
 loadSavedEvents()
+setCameraMode(cameraMode)
+
+modeBtns.forEach(btn => {
+  btn.addEventListener('click', () => setCameraMode(btn.dataset.mode))
+})
+if (slsBtn) {
+  slsBtn.addEventListener('click', toggleSls)
+}
 
 // Simple AES-GCM encryption helpers using passphrase
 async function getKeyMaterial(password) {
