@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sensor Fusion — PWA Prototype</title>
+  <link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="SensorFusion">
+</head>
+<body>
+  <header>
+    <h1>Sensor Fusion (PWA Prototype)</h1>
+    <p class="subtitle">Runs in Safari on iPhone — no Mac needed</p>
+  </header>
+
+  <main>
+    <div id="hud">
+      <div>
+        <div class="label">Anomaly Score</div>
+        <div id="score" class="score">0</div>
+      </div>
+      <div>
+        <div class="label">Active Sensors</div>
+        <div id="sensors" class="small">none</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="startBtn">Start Monitoring</button>
+        <button id="exportBtn">Export JSON</button>
+        <button id="clearBtn">Clear Saved</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input id="passphrase" type="password" placeholder="Set passphrase (optional)" style="padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06)">
+      <button id="lockBtn">Lock/Unlock Storage</button>
+      <div style="color:var(--muted);font-size:12px">Storage saved to device (encrypted if passphrase set)</div>
+    </div>
+
+    <section>
+      <h2>Live Spectrogram</h2>
+      <canvas id="spec" width="600" height="120"></canvas>
+    </section>
+
+    <section>
+      <h2>Camera Preview</h2>
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="vcanvas" width="320" height="240" hidden></canvas>
+    </section>
+
+    <section>
+      <h2>Timeline</h2>
+      <ul id="events"></ul>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
