@@ -354,6 +354,8 @@ if (slsBtn) {
   slsBtn.addEventListener('click', toggleSls)
 }
 
+window.start = start
+
 // Simple AES-GCM encryption helpers using passphrase
 async function getKeyMaterial(password) {
   const enc = new TextEncoder()
